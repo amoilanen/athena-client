@@ -53,10 +53,19 @@ object Main extends App {
   }
 
   // TODO: Parse the values in the rows according to the column metadata
-  case class QueryResults(columns: Seq[ColumnInfo], rows: Seq[Row]) {
+  case class QueryResults[T: RowReader](columns: Seq[ColumnInfo], rows: Seq[Row]) {
+
+    def parse(): Seq[T] = {
+      val rowReader = implicitly[RowReader[T]]
+      rows.drop(1).map(rowReader.readRow(_))
+    }
   }
 
-  def getQueryResults(queryExecutionId: QueryExecutionId): QueryResults = {
+  trait RowReader[A] {
+    def readRow(row: Row): A
+  }
+
+  def getQueryResults[T: RowReader](queryExecutionId: QueryExecutionId): QueryResults[T] = {
     val getResultsRequest = GetQueryResultsRequest.builder.queryExecutionId(queryExecutionId.value).build
 
     val queryResults = athenaClient.getQueryResults(getResultsRequest)
@@ -64,18 +73,30 @@ object Main extends App {
     val columns: Seq[ColumnInfo] = queryResults.resultSet.resultSetMetadata.columnInfo.asScala.toList
     val rows: Seq[Row] = queryResults.resultSet.rows.asScala.toList
 
-    QueryResults(columns, rows)
+    QueryResults[T](columns, rows)
   }
 
-  val query = "select * from cities;"
+  val query = "select * from cities order by population desc limit 5;"
 
   val athenaClient: athena.AthenaClient = AthenaClient.builder
     .region(Region.EU_CENTRAL_1)
     .credentialsProvider(DefaultCredentialsProvider.create).build
 
+  case class CityPopulation(city: String, population: Int)
+
+  //TODO: Provide a DSL for constructing a reader
+  implicit object CityPopulationReader extends RowReader[CityPopulation] {
+    def readRow(row: Row): CityPopulation = {
+      val city: String = row.data().get(0).varCharValue()
+      val population: Int = row.data().get(1).varCharValue().toInt
+
+      CityPopulation(city, population)
+    }
+  }
+
   val queryExecution = submitQuery(query)
   waitForQueryExecutionToComplete(queryExecution)
-  val queryResults = getQueryResults(queryExecution)
+  val queryResults: Seq[CityPopulation] = getQueryResults[CityPopulation](queryExecution).parse
 
   println(queryResults)
 }
