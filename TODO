@@ -1,3 +1,5 @@
+- Athena query results readers
+  -- Add more different readers to support all the Athena types and also common cases such as storing an array
 - Synchronous API for query execution
 - Scala wrappers around Java objects to simplify query submission and query execution checking
 - Asynchronous API for query execution, error handling

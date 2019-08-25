@@ -1,6 +1,8 @@
 package io.github.antivanov.athena
 
-import software.amazon.awssdk.auth.credentials.{DefaultCredentialsProvider, InstanceProfileCredentialsProvider}
+import io.github.antivanov.athena.query.{QueryResults, RowReader}
+import io.github.antivanov.athena.query.RowReader._
+import software.amazon.awssdk.auth.credentials.{DefaultCredentialsProvider}
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.athena
 import software.amazon.awssdk.services.athena.AthenaClient
@@ -52,19 +54,6 @@ object Main extends App {
     }
   }
 
-  // TODO: Parse the values in the rows according to the column metadata
-  case class QueryResults[T: RowReader](columns: Seq[ColumnInfo], rows: Seq[Row]) {
-
-    def parse(): Seq[T] = {
-      val rowReader = implicitly[RowReader[T]]
-      rows.drop(1).map(rowReader.readRow(_))
-    }
-  }
-
-  trait RowReader[A] {
-    def readRow(row: Row): A
-  }
-
   def getQueryResults[T: RowReader](queryExecutionId: QueryExecutionId): QueryResults[T] = {
     val getResultsRequest = GetQueryResultsRequest.builder.queryExecutionId(queryExecutionId.value).build
 
@@ -84,15 +73,12 @@ object Main extends App {
 
   case class CityPopulation(city: String, population: Int)
 
-  //TODO: Provide a DSL for constructing a reader
-  implicit object CityPopulationReader extends RowReader[CityPopulation] {
-    def readRow(row: Row): CityPopulation = {
-      val city: String = row.data().get(0).varCharValue()
-      val population: Int = row.data().get(1).varCharValue().toInt
-
-      CityPopulation(city, population)
+  implicit val cityPopulationReader: RowReader[CityPopulation] =
+    str(0) ~
+    int(1) map {
+      case city ~ population =>
+        CityPopulation(city, population)
     }
-  }
 
   val queryExecution = submitQuery(query)
   waitForQueryExecutionToComplete(queryExecution)
