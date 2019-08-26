@@ -2,6 +2,10 @@ package io.github.antivanov.athena.query
 
 import software.amazon.awssdk.services.athena.model.Row
 
+import scala.util.Try
+
+final case class RowParsingException(cause: Throwable) extends Exception(cause)
+
 /*
  * Mechanism to combine the Readers together is inspired by Anorm https://github.com/playframework/anorm
  */
@@ -9,11 +13,15 @@ trait RowReader[A] {
 
   import RowReader._
 
+  def readRowTry(row: Row): Either[RowParsingException, A] =
+    Try(readRow(row)).toEither.left.map(RowParsingException(_))
+
   def readRow(row: Row): A
 
   def ~[B](otherRowReader: RowReader[B]): RowReader[A ~ B] = (row: Row) => {
-    val readValue: A = readRow(row)
-    val otherReadValue: B = otherRowReader.readRow(row)
+    val readValue = readRow(row)
+    val otherReadValue = otherRowReader.readRow(row)
+
     RowReader.~(readValue, otherReadValue)
   }
 
