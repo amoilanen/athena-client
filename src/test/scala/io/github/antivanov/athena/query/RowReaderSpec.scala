@@ -43,5 +43,11 @@ class RowReaderSpec extends FreeSpec with Matchers {
         exception shouldNot be(null)
       }
     }
+
+    "list" - {
+      "correct index" in {
+        list[Int](int(0)).readRow(row("[1,2,3]")) shouldEqual List(1, 2, 3)
+      }
+    }
   }
 }
