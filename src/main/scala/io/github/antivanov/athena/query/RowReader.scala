@@ -1,11 +1,13 @@
 package io.github.antivanov.athena.query
 
 import java.sql.Timestamp
+import java.text.SimpleDateFormat
 import java.util.Date
-import scala.jdk.CollectionConverters._
 
+import scala.jdk.CollectionConverters._
 import software.amazon.awssdk.services.athena.model.Row
 
+import scala.reflect.ClassTag
 import scala.util.Try
 
 final case class RowParsingException(cause: Throwable) extends Exception(cause)
@@ -62,14 +64,23 @@ object RowReader {
     (value: String) => BigDecimal(value)
   )
 
-  def timestamp(columnIndex: Int): RowReader[Timestamp] =
-    (row: Row) => ???
+  val DefaultFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
 
-  def date(columnIndex: Int): RowReader[Date] =
-    (row: Row) => ???
+  def timestamp(columnIndex: Int, format: String = DefaultFormat): RowReader[Timestamp] = new ColumnRowReader[Timestamp](columnIndex,
+    (value: String) => {
+      val date = new SimpleDateFormat(format).parse(value)
+      new Timestamp(date.getTime)
+    }
+  )
 
-  def array[A](reader: ColumnRowReader[A]): RowReader[Array[A]] =
-    (row: Row) => ???
+  def date(columnIndex: Int, format: String = DefaultFormat): RowReader[Date] = new ColumnRowReader[Date](columnIndex,
+    (value: String) => {
+      new SimpleDateFormat(format).parse(value)
+    }
+  )
+
+  def array[A: ClassTag](reader: ColumnRowReader[A]): RowReader[Array[A]] =
+    (row: Row) => list[A](reader).readRow(row).toArray[A]
 
   def list[A](reader: ColumnRowReader[A]): ColumnRowReader[List[A]] = new ColumnRowReader[List[A]](reader.columnIndex,
     (value: String) => {
