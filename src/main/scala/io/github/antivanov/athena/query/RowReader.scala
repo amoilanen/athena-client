@@ -64,6 +64,7 @@ object RowReader {
     (value: String) => BigDecimal(value)
   )
 
+  //TODO: Use ISO8061 or define/use some constants for commonly used formats
   val DefaultFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
 
   def timestamp(columnIndex: Int, format: String = DefaultFormat): RowReader[Timestamp] = new ColumnRowReader[Timestamp](columnIndex,
@@ -91,5 +92,6 @@ object RowReader {
     }
   )
 
-  //TODO: Custom ColumnRowReader
+  def ofType[A](columnIndex: Int)(implicit parse: String => A) =
+    new ColumnRowReader[A](columnIndex, parse)
 }

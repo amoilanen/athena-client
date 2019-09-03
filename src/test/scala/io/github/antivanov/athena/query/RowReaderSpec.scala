@@ -69,5 +69,26 @@ class RowReaderSpec extends FreeSpec with Matchers {
         exception shouldNot be(null)
       }
     }
+
+    "ofType" - {
+
+      case class Foo(x: Int, y: Int)
+
+      implicit def fooParser(value: String): Foo = {
+        val Array(x, y) = value.split(',').map(_.toInt)
+        Foo(x, y)
+      }
+
+      "correct index" in {
+        ofType[Foo](0).readRow(row("1,2")) shouldEqual Foo(1, 2)
+      }
+
+      "incorrect index" in {
+        val exception = intercept[Exception] {
+          ofType[Foo](1).readRow(row("1,2"))
+        }
+        exception shouldNot be(null)
+      }
+    }
   }
 }
