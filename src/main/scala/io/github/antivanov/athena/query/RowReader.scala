@@ -4,7 +4,6 @@ import java.sql.Timestamp
 import java.text.SimpleDateFormat
 import java.util.Date
 
-import scala.jdk.CollectionConverters._
 import software.amazon.awssdk.services.athena.model.Row
 
 import scala.reflect.ClassTag

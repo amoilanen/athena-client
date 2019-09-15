@@ -46,12 +46,12 @@ class RowReaderSpec extends FreeSpec with Matchers {
 
     "list" - {
       "correct index" in {
-        list[Int](int(0)).readRow(row("[1,2,3]")) shouldEqual List(1, 2, 3)
+        list(int(0)).readRow(row("[1,2,3]")) shouldEqual List(1, 2, 3)
       }
 
       "incorrect index" in {
         val exception = intercept[Exception] {
-          list[Int](int(3)).readRow(row("[1,2,3]"))
+          list(int(3)).readRow(row("[1,2,3]"))
         }
         exception shouldNot be(null)
       }
@@ -59,12 +59,12 @@ class RowReaderSpec extends FreeSpec with Matchers {
 
     "array" - {
       "correct index" in {
-        array[Int](int(0)).readRow(row("[1,2,3]")) shouldEqual Array(1, 2, 3)
+        array(int(0)).readRow(row("[1,2,3]")) shouldEqual Array(1, 2, 3)
       }
 
       "incorrect index" in {
         val exception = intercept[Exception] {
-          array[Int](int(3)).readRow(row("[1,2,3]"))
+          array(int(3)).readRow(row("[1,2,3]"))
         }
         exception shouldNot be(null)
       }
