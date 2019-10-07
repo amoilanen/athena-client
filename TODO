@@ -1,9 +1,9 @@
 - Athena query results readers
-  -- Add more different readers to support all the Athena types and also common cases such as storing an array
-- Synchronous API for query execution
-- Scala wrappers around Java objects to simplify query submission and query execution checking
+  -- Add more different readers to support all the Athena types and also common cases such as storing an array - OK
+- Synchronous API for query execution - OK
+- Scala wrappers around Java objects to simplify query submission and query execution checking - OK
 - Asynchronous API for query execution, error handling
-- Tests for the query execution utility
+- Tests for the query execution utility and related code
   - Integration tests with a real database
   - Unit tests
 - Port other Java examples to Scala, provide Scala API, add tests

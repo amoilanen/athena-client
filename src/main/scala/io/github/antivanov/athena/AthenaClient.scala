@@ -1,5 +1,7 @@
 package io.github.antivanov.athena
 
+import java.util.concurrent.{Executors, ScheduledExecutorService}
+
 import io.github.antivanov.athena.query.{Query, QueryExecution, QueryResults, RowReader}
 import software.amazon.awssdk.services.athena.model.QueryExecutionState.{CANCELLED, FAILED, QUEUED, RUNNING}
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
@@ -7,50 +9,51 @@ import software.amazon.awssdk.services.athena
 import software.amazon.awssdk.services.athena.AthenaClient
 import software.amazon.awssdk.services.athena.model.Row
 
+import util.Async.schedule
+
 import scala.jdk.CollectionConverters._
-
 import scala.annotation.tailrec
+import scala.concurrent.{ExecutionContext, Future}
 
-class AthenaClient(athenaConfiguration: AthenaConfiguration) {
+class AthenaClient(configuration: AthenaConfiguration)(implicit context: ExecutionContext) {
+
+  //TODO: Relation with ExecutionContext, is it possible to get it from ExecutionContext? Configurable?
+  implicit val scheduler: ScheduledExecutorService = Executors.newScheduledThreadPool(1)
 
   private val client: athena.AthenaClient = AthenaClient.builder
-    .region(athenaConfiguration.region)
+    .region(configuration.region)
     .credentialsProvider(DefaultCredentialsProvider.create).build
 
-  def executeQuery[T: RowReader](query: String): Seq[T] = {
+  def executeQuery[T: RowReader](query: String): Future[Either[Throwable, Seq[T]]] = {
     val queryExecution = submitQuery(query)
-    waitForQueryExecutionToComplete(queryExecution)
-    getQueryResults[T](queryExecution).parse
+    getQueryResults[T](queryExecution).map(_.map(_.parse))
   }
 
   private def submitQuery(query: String): QueryExecution = {
-    val queryExecutionRequest = Query(query).constructStartQueryExecutionRequest(athenaConfiguration)
+    val queryExecutionRequest = Query(query).constructStartQueryExecutionRequest(configuration)
     val queryExecutionId = client.startQueryExecution(queryExecutionRequest).queryExecutionId
 
     QueryExecution(queryExecutionId)
   }
 
-  @tailrec
-  private def waitForQueryExecutionToComplete(queryExecution: QueryExecution): Unit = {
-    //TODO: In asynchronous version schedule the check to be executed later
-    Thread.sleep(1000)
-
+  //TODO: How to make it tail-recursive? Convert to a loop?
+  //@tailrec
+  private def getQueryResults[T: RowReader](queryExecution: QueryExecution): Future[Either[Throwable, QueryResults[T]]] = {
     val queryExecutionResponse = client.getQueryExecution(queryExecution.constructGetQueryExecutionRequest)
     val queryState = queryExecutionResponse.queryExecution.status.state
 
     if (queryState == FAILED) {
-      throw new RuntimeException("Query failed")
+      //TODO: Define custom errors for AthenaClient?
+      Future.successful(Left(throw new RuntimeException("Query failed")))
     } else if (queryState == CANCELLED) {
-      throw new RuntimeException("Query was cancelled")
+      Future.successful(Left(new RuntimeException("Query was cancelled")))
     } else if (queryState == RUNNING || queryState == QUEUED) {
-      waitForQueryExecutionToComplete(queryExecution)
+      schedule(configuration.queryExecutionCheckIntervalMs) { () => getQueryResults(queryExecution) }
+    } else {
+      val queryResults = client.getQueryResults(queryExecution.constructGetQueryResults)
+      val rows: Seq[Row] = queryResults.resultSet.rows.asScala.toList
+
+      Future.successful(Right(QueryResults[T](rows)))
     }
-  }
-
-  private def getQueryResults[T: RowReader](queryExecution: QueryExecution): QueryResults[T] = {
-    val queryResults = client.getQueryResults(queryExecution.constructGetQueryResults)
-    val rows: Seq[Row] = queryResults.resultSet.rows.asScala.toList
-
-    QueryResults[T](rows)
   }
 }
