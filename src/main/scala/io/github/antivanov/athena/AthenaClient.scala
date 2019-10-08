@@ -1,5 +1,6 @@
 package io.github.antivanov.athena
 
+import java.util.{Timer, TimerTask}
 import java.util.concurrent.{Executors, ScheduledExecutorService}
 
 import io.github.antivanov.athena.query.{Query, QueryExecution, QueryResults, RowReader}
@@ -9,16 +10,10 @@ import software.amazon.awssdk.services.athena
 import software.amazon.awssdk.services.athena.AthenaClient
 import software.amazon.awssdk.services.athena.model.Row
 
-import util.Async.schedule
-
 import scala.jdk.CollectionConverters._
-import scala.annotation.tailrec
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, Future, Promise}
 
 class AthenaClient(configuration: AthenaConfiguration)(implicit context: ExecutionContext) {
-
-  //TODO: Relation with ExecutionContext, is it possible to get it from ExecutionContext? Configurable?
-  implicit val scheduler: ScheduledExecutorService = Executors.newScheduledThreadPool(1)
 
   private val client: athena.AthenaClient = AthenaClient.builder
     .region(configuration.region)
@@ -36,24 +31,50 @@ class AthenaClient(configuration: AthenaConfiguration)(implicit context: Executi
     QueryExecution(queryExecutionId)
   }
 
-  //TODO: How to make it tail-recursive? Convert to a loop?
-  //@tailrec
   private def getQueryResults[T: RowReader](queryExecution: QueryExecution): Future[Either[Throwable, QueryResults[T]]] = {
+    val promise = Promise[Either[Throwable, QueryResults[T]]]
+    val timer = new Timer()
+    //TODO: Timeout if query executes for too long
+    //TODO: Re-factor a common pattern from this asynchronous code?
+    val checkQueryExecutionTask = new TimerTask {
+      def run(): Unit = {
+        val checkResult = checkQueryExecutionResults(queryExecution)
+        checkResult match {
+          case Left(error) => {
+            promise.success(Left(error))
+          }
+          case Right(QueryResults(Some(rows))) => {
+            promise.success(Right(QueryResults(Some(rows))))
+          }
+          case Right(QueryResults(None)) => {
+          }
+        }
+      }
+    }
+    timer.schedule(checkQueryExecutionTask, 0L, configuration.queryExecutionCheckIntervalMs)
+    val future = promise.future
+    future.onComplete {_ =>
+      checkQueryExecutionTask.cancel()
+    }
+    future
+  }
+
+  private def checkQueryExecutionResults[T: RowReader](queryExecution: QueryExecution): Either[Throwable, QueryResults[T]] = {
     val queryExecutionResponse = client.getQueryExecution(queryExecution.constructGetQueryExecutionRequest)
     val queryState = queryExecutionResponse.queryExecution.status.state
 
     if (queryState == FAILED) {
       //TODO: Define custom errors for AthenaClient?
-      Future.successful(Left(throw new RuntimeException("Query failed")))
+      Left(throw new RuntimeException("Query failed"))
     } else if (queryState == CANCELLED) {
-      Future.successful(Left(new RuntimeException("Query was cancelled")))
+      Left(new RuntimeException("Query was cancelled"))
     } else if (queryState == RUNNING || queryState == QUEUED) {
-      schedule(configuration.queryExecutionCheckIntervalMs) { () => getQueryResults(queryExecution) }
+      Right(QueryResults(None))
     } else {
       val queryResults = client.getQueryResults(queryExecution.constructGetQueryResults)
       val rows: Seq[Row] = queryResults.resultSet.rows.asScala.toList
 
-      Future.successful(Right(QueryResults[T](rows)))
+      Right(QueryResults[T](Option(rows)))
     }
   }
 }
