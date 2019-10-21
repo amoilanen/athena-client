@@ -1,8 +1,10 @@
 package io.github.antivanov.athena.util
 
+import java.util.{Timer, TimerTask}
 import java.util.concurrent.{ScheduledExecutorService, TimeUnit}
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
+import scala.util.{Failure, Success, Try}
 
 object Async {
 
@@ -18,5 +20,40 @@ object Async {
     promise.future
   }
 
-  def
+  def check[T](intervalMs: Int, timeoutMs: Int)(block: () => Option[T])(implicit ec: ExecutionContext): Future[T] = {
+    val promise = Promise[T]
+    val timer = new Timer()
+    var executionTimes = 0
+
+    val checkTask = new TimerTask {
+      def run(): Unit = {
+        val checkResult = Try(block())
+        executionTimes = executionTimes + 1
+        if (executionTimes * intervalMs > timeoutMs) {
+          promise.failure(new RuntimeException("Waiting for results timed out"))
+        } else {
+          checkResult match {
+            case Success(result) => {
+              result match {
+                case Some(value) => {
+                  promise.success(value)
+                }
+                case None => {
+                }
+              }
+            }
+            case Failure(exception) => {
+              promise.failure(exception)
+            }
+          }
+        }
+      }
+    }
+    timer.schedule(checkTask, 0L, intervalMs)
+    val future = promise.future
+    future.onComplete {_ =>
+      checkTask.cancel()
+    }
+    future
+  }
 }
