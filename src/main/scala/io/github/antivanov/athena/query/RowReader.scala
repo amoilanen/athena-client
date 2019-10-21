@@ -48,7 +48,7 @@ object RowReader {
   final case class ~[+A, +B](_1: A, _2: B)
 
   def str(columnIndex: Int): ColumnRowReader[String] = new ColumnRowReader[String](columnIndex,
-    (value: String) => value
+    identity[String]
   )
 
   def int(columnIndex: Int): ColumnRowReader[Int] = new ColumnRowReader[Int](columnIndex,

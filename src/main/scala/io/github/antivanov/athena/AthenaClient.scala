@@ -1,7 +1,6 @@
 package io.github.antivanov.athena
 
 import java.util.{Timer, TimerTask}
-import java.util.concurrent.{Executors, ScheduledExecutorService}
 
 import io.github.antivanov.athena.query.{Query, QueryExecution, QueryResults, RowReader}
 import software.amazon.awssdk.services.athena.model.QueryExecutionState.{CANCELLED, FAILED, QUEUED, RUNNING}
@@ -34,19 +33,25 @@ class AthenaClient(configuration: AthenaConfiguration)(implicit context: Executi
   private def getQueryResults[T: RowReader](queryExecution: QueryExecution): Future[Either[Throwable, QueryResults[T]]] = {
     val promise = Promise[Either[Throwable, QueryResults[T]]]
     val timer = new Timer()
-    //TODO: Timeout if query executes for too long
+    var checkExecutionTimes = 0
+
     //TODO: Re-factor a common pattern from this asynchronous code?
     val checkQueryExecutionTask = new TimerTask {
       def run(): Unit = {
         val checkResult = checkQueryExecutionResults(queryExecution)
-        checkResult match {
-          case Left(error) => {
-            promise.success(Left(error))
-          }
-          case Right(QueryResults(Some(rows))) => {
-            promise.success(Right(QueryResults(Some(rows))))
-          }
-          case Right(QueryResults(None)) => {
+        checkExecutionTimes = checkExecutionTimes + 1
+        if (checkExecutionTimes * configuration.queryExecutionCheckIntervalMs > configuration.queryTimeoutMs) {
+          promise.success(Left(new RuntimeException("Waiting for results timed out")))
+        } else {
+          checkResult match {
+            case Left(error) => {
+              promise.success(Left(error))
+            }
+            case Right(QueryResults(Some(rows))) => {
+              promise.success(Right(QueryResults(Some(rows))))
+            }
+            case Right(QueryResults(None)) => {
+            }
           }
         }
       }
