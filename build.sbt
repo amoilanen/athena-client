@@ -6,10 +6,13 @@ ThisBuild / organization     := "io.github.antivanov"
 ThisBuild / organizationName := "antivanov"
 
 lazy val root = (project in file("."))
+  .configs(IntegrationTest)
   .settings(
     name := "athena-client",
+    Defaults.itSettings,
     libraryDependencies ++= Seq(
-      scalaTest % Test,
-      "software.amazon.awssdk" % "athena" % "2.7.26"
+      scalaTest % "it,test",
+      "software.amazon.awssdk" % "athena" % "2.7.26",
+      "software.amazon.awssdk" % "s3" % "2.9.24" % "it,test"
     )
   )
