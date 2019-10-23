@@ -11,8 +11,9 @@ lazy val root = (project in file("."))
     name := "athena-client",
     Defaults.itSettings,
     libraryDependencies ++= Seq(
+
       scalaTest % "it,test",
       "software.amazon.awssdk" % "athena" % "2.7.26",
-      "software.amazon.awssdk" % "s3" % "2.9.24" % "it,test"
+      "software.amazon.awssdk" % "s3" % "2.9.23" % "it,test"
     )
   )
