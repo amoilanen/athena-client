@@ -1,11 +1,16 @@
 package io.github.antivanov.athena
 
+import java.io.{File, InputStreamReader}
+import java.util
+
 import org.scalatest.{FreeSpec, Matchers}
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
+import software.amazon.awssdk.core.sync.RequestBody
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.S3Client
-import software.amazon.awssdk.services.s3.model.{CreateBucketRequest, DeleteBucketRequest, ListBucketsRequest}
+import software.amazon.awssdk.services.s3.model.{CreateBucketRequest, DeleteBucketRequest, DeleteObjectRequest, ListBucketsRequest, ListObjectsRequest, PutObjectRequest, S3Object}
 
+import scala.io.Source
 import scala.jdk.CollectionConverters._
 
 class AthenaClientItSpec extends FreeSpec with Matchers {
@@ -14,6 +19,9 @@ class AthenaClientItSpec extends FreeSpec with Matchers {
   val region = Region.EU_CENTRAL_1
   val s3Client = S3Client.builder.region(region).credentialsProvider(DefaultCredentialsProvider.create).build;
 
+  def readResource(fileName: String): String =
+    Source.fromResource(fileName).getLines().toList.mkString("\n")
+
   def existingBuckets(): Seq[String] = {
     val request = ListBucketsRequest.builder.build
     val response = s3Client.listBuckets(request)
@@ -21,7 +29,6 @@ class AthenaClientItSpec extends FreeSpec with Matchers {
   }
 
   def bucketExists(bucketName: String): Boolean = {
-    println(existingBuckets())
     existingBuckets().contains(bucketName)
   }
 
@@ -29,8 +36,20 @@ class AthenaClientItSpec extends FreeSpec with Matchers {
     s3Client.createBucket(CreateBucketRequest.builder().bucket(bucketName).build())
   }
 
+  def putObject(bucketName: String, key: String, contents: String): Unit = {
+    s3Client.putObject(
+      PutObjectRequest.builder().bucket(bucketName).key(key).build(),
+      RequestBody.fromString(contents)
+    )
+  }
+
   def deleteBucket(bucketName: String): Unit = {
-    //TODO: Also delete all the files contained in the bucket
+    val objectsInBucket: List[S3Object] = s3Client.listObjects(ListObjectsRequest.builder().bucket(bucketName).build())
+      .contents().asScala.toList
+    objectsInBucket.foreach(obj =>
+      s3Client.deleteObject(DeleteObjectRequest.builder().bucket(bucketName).key(obj.key).build())
+    )
+
     s3Client.deleteBucket(DeleteBucketRequest.builder().bucket(bucketName).build())
   }
 
@@ -40,7 +59,8 @@ class AthenaClientItSpec extends FreeSpec with Matchers {
       if (!bucketExists(outputBucketName)) {
         createBucket(outputBucketName)
       }
-      //TODO: Upload a CSV file with the Athena table data to the S3 bucket
+      putObject(outputBucketName, "cities.csv", readResource("cities.csv"))
+
       deleteBucket(outputBucketName)
     }
   }
