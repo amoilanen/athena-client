@@ -45,13 +45,6 @@ case class ColumnRowReader[A](columnIndex: Int, parser: String => A) extends Row
 
 object RowReader {
 
-  object UnitReader extends RowReader[Unit] {
-
-    def readRow(row: Row): Unit = {}
-  }
-
-  implicit val unitReader: RowReader[Unit] = UnitReader
-
   final case class ~[+A, +B](_1: A, _2: B)
 
   def str(columnIndex: Int): ColumnRowReader[String] = new ColumnRowReader[String](columnIndex,

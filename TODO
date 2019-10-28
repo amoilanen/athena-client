@@ -4,7 +4,7 @@
 - Scala wrappers around Java objects to simplify query submission and query execution checking - OK
 - Asynchronous API for query execution, error handling
 - Tests for the query execution utility and related code
-  - Integration tests with a real database
+  - Integration tests with a real database - OK
   - Unit tests
 - Port other Java examples to Scala, provide Scala API, add tests
 - Documentation

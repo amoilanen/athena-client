@@ -18,6 +18,18 @@ class AthenaClient(configuration: AthenaConfiguration)(implicit context: Executi
     .region(configuration.region)
     .credentialsProvider(DefaultCredentialsProvider.create).build
 
+  def executeUpdate(statement: String): Future[Either[Throwable, Unit]] = {
+
+    object UnitReader extends RowReader[Unit] {
+
+      def readRow(row: Row): Unit = {}
+    }
+
+    implicit val unitReader: RowReader[Unit] = UnitReader
+
+    executeQuery(statement).map(_.map(_ => ()))
+  }
+
   def executeQuery[T: RowReader](query: String): Future[Either[Throwable, Seq[T]]] = {
     val queryExecution = submitQuery(query)
     getQueryResults[T](queryExecution).map(_.map(_.parse))
