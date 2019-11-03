@@ -32,7 +32,7 @@ class AthenaClient(configuration: AthenaConfiguration)(implicit context: Executi
 
   def executeQuery[T: RowReader](query: String): Future[Either[Throwable, Seq[T]]] = {
     val queryExecution = submitQuery(query)
-    getQueryResults[T](queryExecution).map(_.map(_.parse))
+    getQueryResults[T](queryExecution).map(_.flatMap(_.parse))
   }
 
   private def submitQuery(query: String): QueryExecution = {

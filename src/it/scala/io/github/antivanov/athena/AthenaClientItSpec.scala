@@ -22,9 +22,7 @@ class AthenaClientItSpec extends FreeSpec with QuerySlownessTolerance with Match
   val s3Client = S3Client(region)
 
   val tableData =
-    """
-      |city,population
-      |Helsinki,650033
+    """Helsinki,650033
       |Espoo,283944
       |Tampere,235487
       |Vantaa,228166
