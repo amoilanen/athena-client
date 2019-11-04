@@ -15,7 +15,6 @@ lazy val root = (project in file("."))
       scalaTest % "it,test",
       "software.amazon.awssdk" % "athena" % "2.7.26",
       "software.amazon.awssdk" % "s3" % "2.9.23" % "it,test",
-      "org.mockito" % "mockito-core" % "2.10.0" % "test" +
-        ""
+      "org.mockito" % "mockito-core" % "2.10.0" % "test"
     )
   )

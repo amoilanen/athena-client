@@ -1,5 +1,9 @@
 package io.github.antivanov.athena.query
 
+import java.sql.Timestamp
+import java.time.{Instant, OffsetDateTime, ZoneOffset}
+import java.util.Date
+
 import scala.jdk.CollectionConverters._
 import org.scalatest.{FreeSpec, Matchers}
 import software.amazon.awssdk.services.athena.model.{Datum, Row}
@@ -39,6 +43,63 @@ class RowReaderSpec extends FreeSpec with Matchers {
       "not an int" in {
         val exception = intercept[Exception] {
           int(0).readRow(row("abc"))
+        }
+        exception shouldNot be(null)
+      }
+    }
+
+    "double" - {
+      "correct index" in {
+        double(0).readRow(row("12.3")) shouldEqual 12.3
+      }
+      "incorrect index" in {
+        val exception = intercept[Exception] {
+          double(2).readRow(row("12.3"))
+        }
+        exception shouldNot be(null)
+      }
+      "not a double" in {
+        val exception = intercept[Exception] {
+          double(0).readRow(row("abc"))
+        }
+        exception shouldNot be(null)
+      }
+    }
+
+    "bigDecimal" - {
+      "correct index" in {
+        bigDecimal(0).readRow(row("12345.67")) shouldEqual BigDecimal("12345.67")
+      }
+      "incorrect index" in {
+        val exception = intercept[Exception] {
+          bigDecimal(2).readRow(row("12345.67"))
+        }
+        exception shouldNot be(null)
+      }
+      "not a bigDecimal" in {
+        val exception = intercept[Exception] {
+          bigDecimal(0).readRow(row("abc"))
+        }
+        exception shouldNot be(null)
+      }
+    }
+
+    "timestamp" - {
+      "correct index" in {
+        val timestampString = "2019-11-04T21:15:00.123Z"
+        val instant = Instant.parse(timestampString)
+        val expected = Date.from(instant)
+        timestamp(0).readRow(row(timestampString)) shouldEqual new Timestamp(instant.toEpochMilli())
+      }
+      "incorrect index" in {
+        val exception = intercept[Exception] {
+          timestamp(2).readRow(row("abc"))
+        }
+        exception shouldNot be(null)
+      }
+      "not a timestamp" in {
+        val exception = intercept[Exception] {
+          timestamp(0).readRow(row("abc"))
         }
         exception shouldNot be(null)
       }
