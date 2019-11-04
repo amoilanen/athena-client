@@ -49,7 +49,7 @@ class QueryResultsSpec extends FreeSpec with MockitoSugar with Matchers {
         val error = new RuntimeException("Could not parse the value")
         when(reader.readRow(any())).thenThrow(error)
 
-        QueryResults(rows).parse() shouldEqual Left(ParsingError(error))
+        QueryResults(rows).parse() shouldEqual Left(QueryResultsParsingError(error))
       }
     }
   }
