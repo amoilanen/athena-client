@@ -1,7 +1,9 @@
 package io.github.antivanov.athena.query
 
-import java.sql.Timestamp
-import java.time.{Instant, OffsetDateTime, ZoneOffset}
+import java.sql.{Time, Timestamp}
+import java.time.{Instant, LocalDate, LocalTime, ZoneId, ZoneOffset, ZonedDateTime}
+import java.time.format.{DateTimeFormatter, DateTimeFormatterBuilder}
+import java.time.temporal.TemporalField
 import java.util.Date
 
 import scala.jdk.CollectionConverters._
@@ -87,9 +89,12 @@ class RowReaderSpec extends FreeSpec with Matchers {
     "timestamp" - {
       "correct index" in {
         val timestampString = "2019-11-04T21:15:00.123Z"
-        val instant = Instant.parse(timestampString)
-        val expected = Date.from(instant)
-        timestamp(0).readRow(row(timestampString)) shouldEqual new Timestamp(instant.toEpochMilli())
+        val expectedDateTime = ZonedDateTime.of(
+          LocalDate.of(2019, 11, 4),
+          LocalTime.of(21, 15, 0, 123000000),
+          ZoneId.ofOffset("UTC", ZoneOffset.UTC)
+        )
+        timestamp(0).readRow(row(timestampString)).toInstant shouldEqual expectedDateTime.toInstant
       }
       "incorrect index" in {
         val exception = intercept[Exception] {

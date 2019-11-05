@@ -2,6 +2,7 @@ package io.github.antivanov.athena.query
 
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
+import java.time.Instant
 import java.util.Date
 
 import software.amazon.awssdk.services.athena.model.Row
@@ -63,19 +64,16 @@ object RowReader {
     (value: String) => BigDecimal(value)
   )
 
-  //TODO: Use ISO8061 or define/use some constants for commonly used formats
-  val DefaultFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
-
-  def timestamp(columnIndex: Int, format: String = DefaultFormat): RowReader[Timestamp] = new ColumnRowReader[Timestamp](columnIndex,
+  def timestamp(columnIndex: Int): RowReader[Timestamp] = new ColumnRowReader[Timestamp](columnIndex,
     (value: String) => {
-      val date = new SimpleDateFormat(format).parse(value)
-      new Timestamp(date.getTime)
+      val date = Instant.parse(value)
+      new Timestamp(date.toEpochMilli)
     }
   )
 
-  def date(columnIndex: Int, format: String = DefaultFormat): RowReader[Date] = new ColumnRowReader[Date](columnIndex,
+  def date(columnIndex: Int): RowReader[Date] = new ColumnRowReader[Date](columnIndex,
     (value: String) => {
-      new SimpleDateFormat(format).parse(value)
+      Date.from(Instant.parse(value))
     }
   )
 
