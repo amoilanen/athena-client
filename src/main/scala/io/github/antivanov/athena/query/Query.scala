@@ -3,7 +3,7 @@ package io.github.antivanov.athena.query
 import io.github.antivanov.athena.AthenaConfiguration
 import software.amazon.awssdk.services.athena.model.{QueryExecutionContext, ResultConfiguration, StartQueryExecutionRequest}
 
-case class Query(queryString: String) {
+case class Query(query: String) {
 
   def constructStartQueryExecutionRequest(athenaConfiguration: AthenaConfiguration): StartQueryExecutionRequest = {
     val resultConfiguration = ResultConfiguration.builder
@@ -11,6 +11,6 @@ case class Query(queryString: String) {
     val queryContext = QueryExecutionContext.builder
       .database(athenaConfiguration.databaseName).build
     StartQueryExecutionRequest.builder
-      .queryString(queryString).queryExecutionContext(queryContext).resultConfiguration(resultConfiguration).build
+      .queryString(query).queryExecutionContext(queryContext).resultConfiguration(resultConfiguration).build
   }
 }
