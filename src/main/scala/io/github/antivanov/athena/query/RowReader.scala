@@ -39,9 +39,8 @@ case class ColumnRowReader[A](columnIndex: Int, parser: String => A) extends Row
 
   def getParser: String => A = parser
 
-  final def readRow(row: Row): A = {
+  final def readRow(row: Row): A =
     parser(row.data().get(columnIndex).varCharValue())
-  }
 }
 
 object RowReader {
@@ -64,6 +63,7 @@ object RowReader {
     (value: String) => BigDecimal(value)
   )
 
+  //TODO: Use Instant instead?
   def timestamp(columnIndex: Int): RowReader[Timestamp] = new ColumnRowReader[Timestamp](columnIndex,
     (value: String) => {
       val date = Instant.parse(value)
@@ -83,9 +83,7 @@ object RowReader {
   def list[A](reader: ColumnRowReader[A]): ColumnRowReader[List[A]] = new ColumnRowReader[List[A]](reader.columnIndex,
     (value: String) => {
       val listValues: Seq[String] = value.split("[,\\[\\]]").toList.filter(_.length > 0)
-      listValues.map { listValue =>
-        reader.parser(listValue)
-      }.toList
+      listValues.map(reader.parser(_)).toList
     }
   )
 

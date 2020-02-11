@@ -7,6 +7,10 @@
   - Integration tests with a real database - OK
   - Unit tests & refactoring
     - Move more code to the classes of the query package
+    - Create shared error hierarchy
+    - Define a RowReader for Instant?
+    - Instead of QuerySlownessTolerance use PatienceConfig?
+    - Add unit tests for all the classes
 
 - Port other Java examples to Scala, provide Scala API, add tests
 - Documentation

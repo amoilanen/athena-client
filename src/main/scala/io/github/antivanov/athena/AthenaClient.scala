@@ -4,7 +4,7 @@ import io.github.antivanov.athena.query.{Query, QueryExecution, QueryResults, Ro
 import software.amazon.awssdk.services.athena.model.QueryExecutionState.{CANCELLED, FAILED, QUEUED, RUNNING}
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
 import software.amazon.awssdk.services.athena
-import software.amazon.awssdk.services.athena.AthenaClient
+import software.amazon.awssdk.services.athena.{ AthenaClient => JavaAthenaClient }
 import software.amazon.awssdk.services.athena.model.Row
 import util.Async.check
 
@@ -14,7 +14,7 @@ import scala.util.control.NonFatal
 
 class AthenaClient(configuration: AthenaConfiguration)(implicit context: ExecutionContext) {
 
-  private val client: athena.AthenaClient = AthenaClient.builder
+  private val client: athena.AthenaClient = JavaAthenaClient.builder
     .region(configuration.region)
     .credentialsProvider(DefaultCredentialsProvider.create).build
 

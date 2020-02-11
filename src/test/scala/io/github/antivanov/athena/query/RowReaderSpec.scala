@@ -1,10 +1,6 @@
 package io.github.antivanov.athena.query
 
-import java.sql.{Time, Timestamp}
-import java.time.{Instant, LocalDate, LocalTime, ZoneId, ZoneOffset, ZonedDateTime}
-import java.time.format.{DateTimeFormatter, DateTimeFormatterBuilder}
-import java.time.temporal.TemporalField
-import java.util.Date
+import java.time.{LocalDate, LocalTime, ZoneId, ZoneOffset, ZonedDateTime}
 
 import scala.jdk.CollectionConverters._
 import org.scalatest.{FreeSpec, Matchers}
