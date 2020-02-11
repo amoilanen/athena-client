@@ -71,12 +71,6 @@ object RowReader {
     }
   )
 
-  def date(columnIndex: Int): RowReader[Date] = new ColumnRowReader[Date](columnIndex,
-    (value: String) => {
-      Date.from(Instant.parse(value))
-    }
-  )
-
   def array[A: ClassTag](reader: ColumnRowReader[A]): RowReader[Array[A]] =
     (row: Row) => list[A](reader).readRow(row).toArray[A]
 
