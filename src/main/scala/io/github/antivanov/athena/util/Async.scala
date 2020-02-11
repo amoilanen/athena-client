@@ -33,18 +33,10 @@ object Async {
           promise.failure(new RuntimeException("Waiting for results timed out"))
         } else {
           checkResult match {
-            case Success(result) => {
-              result match {
-                case Some(value) => {
-                  promise.success(value)
-                }
-                case None => {
-                }
-              }
-            }
-            case Failure(exception) => {
+            case Success(result) =>
+              result.map(promise.success(_))
+            case Failure(exception) =>
               promise.failure(exception)
-            }
           }
         }
       }
