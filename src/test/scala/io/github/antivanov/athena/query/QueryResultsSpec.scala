@@ -1,31 +1,29 @@
 package io.github.antivanov.athena.query
 
+import org.scalamock.scalatest.MockFactory
 import org.scalatest.{FreeSpec, Matchers}
-import org.scalatestplus.mockito.MockitoSugar
 import software.amazon.awssdk.services.athena.model.{Datum, Row}
-import org.mockito.Mockito._
-import org.mockito.ArgumentMatchers.{any}
 
 import scala.jdk.CollectionConverters._
 
-class QueryResultsSpec extends FreeSpec with MockitoSugar with Matchers {
+class QueryResultsSpec extends FreeSpec with MockFactory with Matchers {
 
   "QueryResults" - {
+
+    val range = (0 to 3)
+    val rows = range.map(idx => {
+      val datum = Datum.builder.varCharValue(idx.toString()).build()
+      Row.builder.data(List(datum).asJava).build()
+    })
+    val values = range.map(idx => f"value$idx")
 
     "parse" - {
 
       trait TestCase {
-        implicit val reader: RowReader[String] = mock[RowReader[String]]
-
-        val range = (0 to 3)
-        val rows = range.map(idx => {
-          val datum = Datum.builder.varCharValue(idx.toString()).build()
-          Row.builder.data(List(datum).asJava).build()
-        })
-        val values = range.map(idx => f"value$idx")
+        implicit val reader: RowReader[String] = stub[RowReader[String]]
 
         range.foreach(idx =>
-          when(reader.readRow(rows(idx))).thenReturn(values(idx))
+          (reader.readRow _).when(rows(idx)).returns(values(idx))
         )
       }
 
@@ -45,9 +43,11 @@ class QueryResultsSpec extends FreeSpec with MockitoSugar with Matchers {
         QueryResults(rows.take(0)).parse() shouldEqual Right(Seq())
       }
 
-      "should return left if RowReader throws an exception" in new TestCase {
+      "should return left if RowReader throws an exception" in {
+        implicit val reader: RowReader[String] = stub[RowReader[String]]
+
         val error = new RuntimeException("Could not parse the value")
-        when(reader.readRow(any())).thenThrow(error)
+        (reader.readRow _).when(*).throws(error)
 
         QueryResults(rows).parse() shouldEqual Left(QueryResultsParsingError(error))
       }

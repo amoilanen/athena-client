@@ -2,17 +2,16 @@ package io.github.antivanov.athena.util
 
 import java.util.concurrent.{Executors, ScheduledExecutorService}
 
-import org.mockito.Mockito._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{FreeSpec, Matchers}
-import org.scalatestplus.mockito.MockitoSugar
 import org.scalatest.time._
 import Async.{checkAtIntervalUntilReady, checkOnce}
+import org.scalamock.scalatest.MockFactory
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Try}
+import scala.util.Try
 
-class AsyncSpec extends FreeSpec with Matchers with ScalaFutures with MockitoSugar {
+class AsyncSpec extends FreeSpec with Matchers with ScalaFutures with MockFactory {
 
   implicit val defaultPatience =
     PatienceConfig(timeout =  Span(1, Seconds), interval = Span(10, Millis))
@@ -56,36 +55,35 @@ class AsyncSpec extends FreeSpec with Matchers with ScalaFutures with MockitoSug
     }
 
     "block returns before timeout expires - should return a succeeding Future" in {
-      val checkable = mock[Checkable[String]]
-      when(checkable.check())
-        .thenReturn(None)
-        .thenReturn(Option(value))
+      val checkable = stub[Checkable[String]]
+      (checkable.check _).when().returns(None).noMoreThanOnce()
+      (checkable.check _).when().returns(Option(value)).noMoreThanOnce()
 
       checkAtIntervalUntilReady[String](checkable.check _)(waitingIntervalMs, timeoutMs).futureValue shouldEqual value
-      verify(checkable, times(2)).check
+      (checkable.check _).verify().twice()
     }
 
     "block does not return before timeout expires - should return a failing Future" in {
-      val checkable = mock[Checkable[String]]
-      val mockedCheck = (1 to checkNumberBeforeTimeout).foldLeft(when(checkable.check())) {
-        case (mockedCheck, _) => mockedCheck.thenReturn(None)
+      val checkable = stub[Checkable[String]]
+      (1 to checkNumberBeforeTimeout).foreach { _ =>
+        (checkable.check _).when().returns(None).noMoreThanOnce()
       }
-      mockedCheck.thenReturn(Option(value))
+      (checkable.check _).when().returns(Option(value)).noMoreThanOnce()
 
       assertThrows[RuntimeException] {
         checkAtIntervalUntilReady[String](checkable.check _)(waitingIntervalMs, timeoutMs).futureValue
       }
-      verify(checkable, times(checkNumberBeforeTimeout)).check
+      (checkable.check _).verify().repeat(checkNumberBeforeTimeout)
     }
 
     "block never returns - should return a failing Future" in {
-      val checkable = mock[Checkable[String]]
-      when(checkable.check()).thenReturn(None)
+      val checkable = stub[Checkable[String]]
+      (checkable.check _).when().returns(None)
 
       assertThrows[RuntimeException] {
         checkAtIntervalUntilReady[String](checkable.check _)(waitingIntervalMs, timeoutMs).futureValue
       }
-      verify(checkable, times(checkNumberBeforeTimeout)).check
+      (checkable.check _).verify().repeat(checkNumberBeforeTimeout)
     }
   }
 }
