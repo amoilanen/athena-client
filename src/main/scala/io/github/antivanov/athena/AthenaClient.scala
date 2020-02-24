@@ -6,7 +6,7 @@ import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
 import software.amazon.awssdk.services.athena
 import software.amazon.awssdk.services.athena.{ AthenaClient => JavaAthenaClient }
 import software.amazon.awssdk.services.athena.model.Row
-import util.Async.check
+import util.Async.checkAtIntervalUntilReady
 
 import scala.jdk.CollectionConverters._
 import scala.concurrent.{ExecutionContext, Future}
@@ -43,7 +43,7 @@ class AthenaClient(configuration: AthenaConfiguration)(implicit context: Executi
   }
 
   private def getQueryResults[T: RowReader](queryExecution: QueryExecution): Future[Either[Throwable, QueryResults[T]]] = {
-    check(configuration.queryExecutionCheckIntervalMs, configuration.queryTimeoutMs) { () =>
+    checkAtIntervalUntilReady(configuration.queryExecutionCheckIntervalMs, configuration.queryTimeoutMs) { () =>
       checkQueryExecutionResults(queryExecution)
     }.map(Right(_)) recover {
       case NonFatal(error) => Left(error)

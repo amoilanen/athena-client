@@ -1,21 +1,43 @@
 package io.github.antivanov.athena.util
 
-import org.mockito.Mockito._;
+import java.util.concurrent.{Executors, ScheduledExecutorService}
+
+import org.mockito.Mockito._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{FreeSpec, Matchers}
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatest.time._
+import Async.{checkAtIntervalUntilReady, checkOnce}
 
-import scala.concurrent.ExecutionContext.Implicits.global
-
-import Async.{check, schedule}
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Try}
 
 class AsyncSpec extends FreeSpec with Matchers with ScalaFutures with MockitoSugar {
 
   implicit val defaultPatience =
     PatienceConfig(timeout =  Span(1, Seconds), interval = Span(10, Millis))
+  implicit val executionContext: ExecutionContext = ExecutionContext.global
 
-  "check" - {
+  "checkOnce" - {
+
+    implicit val scheduledExecutorService: ScheduledExecutorService = Executors.newScheduledThreadPool(1)
+
+    val value = 4
+
+    "block successfully finishes delay - should return a succeeding Future" in {
+      val block = () => Future.successful(value)
+      checkOnce(0)(block).futureValue shouldEqual value
+    }
+
+    "block fails delay - should return a failing Future" in {
+      val exception = new RuntimeException("Check failed")
+      val block = () => Future.failed(exception)
+
+      Try(checkOnce(0)(block).futureValue) shouldBe Symbol("failure")
+    }
+  }
+
+  "checkAtIntervalUntilReady" - {
 
     val value = "abc"
     val waitingIntervalMs = 50
@@ -30,7 +52,7 @@ class AsyncSpec extends FreeSpec with Matchers with ScalaFutures with MockitoSug
     "block returns immediately - should return a succeeding Future" in {
       def checkValue(): Option[String] = Option(value)
 
-      check[String](waitingIntervalMs, timeoutMs)(checkValue).futureValue shouldEqual value
+      checkAtIntervalUntilReady[String](waitingIntervalMs, timeoutMs)(checkValue).futureValue shouldEqual value
     }
 
     "block returns before timeout expires - should return a succeeding Future" in {
@@ -39,7 +61,7 @@ class AsyncSpec extends FreeSpec with Matchers with ScalaFutures with MockitoSug
         .thenReturn(None)
         .thenReturn(Option(value))
 
-      check[String](waitingIntervalMs, timeoutMs)(checkable.check _).futureValue shouldEqual value
+      checkAtIntervalUntilReady[String](waitingIntervalMs, timeoutMs)(checkable.check _).futureValue shouldEqual value
       verify(checkable, times(2)).check
     }
 
@@ -51,7 +73,7 @@ class AsyncSpec extends FreeSpec with Matchers with ScalaFutures with MockitoSug
       mockedCheck.thenReturn(Option(value))
 
       assertThrows[RuntimeException] {
-        check[String](waitingIntervalMs, timeoutMs)(checkable.check _).futureValue
+        checkAtIntervalUntilReady[String](waitingIntervalMs, timeoutMs)(checkable.check _).futureValue
       }
       verify(checkable, times(checkNumberBeforeTimeout)).check
     }
@@ -61,7 +83,7 @@ class AsyncSpec extends FreeSpec with Matchers with ScalaFutures with MockitoSug
       when(checkable.check()).thenReturn(None)
 
       assertThrows[RuntimeException] {
-        check[String](waitingIntervalMs, timeoutMs)(checkable.check _).futureValue
+        checkAtIntervalUntilReady[String](waitingIntervalMs, timeoutMs)(checkable.check _).futureValue
       }
       verify(checkable, times(checkNumberBeforeTimeout)).check
     }
