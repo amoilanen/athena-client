@@ -6,6 +6,7 @@
 - Tests for the query execution utility and related code
   - Integration tests with a real database - OK
   - Unit tests & refactoring
+    - Use ScalaMock library instead of Java Mockito
     - Move more code to the classes of the query package
     - Create shared error hierarchy
     - Define a RowReader for Instant?
