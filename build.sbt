@@ -5,6 +5,8 @@ ThisBuild / version          := "0.1.0-SNAPSHOT"
 ThisBuild / organization     := "io.github.antivanov"
 ThisBuild / organizationName := "antivanov"
 
+scalacOptions ++= Seq("-deprecation", "-feature")
+
 lazy val root = (project in file("."))
   .configs(IntegrationTest)
   .settings(
