@@ -26,14 +26,14 @@ class AsyncSpec extends FreeSpec with Matchers with ScalaFutures with MockitoSug
 
     "block successfully finishes delay - should return a succeeding Future" in {
       val block = () => Future.successful(value)
-      checkOnce(0)(block).futureValue shouldEqual value
+      checkOnce(block).futureValue shouldEqual value
     }
 
     "block fails delay - should return a failing Future" in {
       val exception = new RuntimeException("Check failed")
-      val block = () => Future.failed(exception)
+      val block = () => Future.failed[Int](exception)
 
-      Try(checkOnce(0)(block).futureValue) shouldBe Symbol("failure")
+      Try(checkOnce(block).futureValue) shouldBe Symbol("failure")
     }
   }
 
@@ -52,7 +52,7 @@ class AsyncSpec extends FreeSpec with Matchers with ScalaFutures with MockitoSug
     "block returns immediately - should return a succeeding Future" in {
       def checkValue(): Option[String] = Option(value)
 
-      checkAtIntervalUntilReady[String](waitingIntervalMs, timeoutMs)(checkValue).futureValue shouldEqual value
+      checkAtIntervalUntilReady[String](checkValue)(waitingIntervalMs, timeoutMs).futureValue shouldEqual value
     }
 
     "block returns before timeout expires - should return a succeeding Future" in {
@@ -61,7 +61,7 @@ class AsyncSpec extends FreeSpec with Matchers with ScalaFutures with MockitoSug
         .thenReturn(None)
         .thenReturn(Option(value))
 
-      checkAtIntervalUntilReady[String](waitingIntervalMs, timeoutMs)(checkable.check _).futureValue shouldEqual value
+      checkAtIntervalUntilReady[String](checkable.check _)(waitingIntervalMs, timeoutMs).futureValue shouldEqual value
       verify(checkable, times(2)).check
     }
 
@@ -73,7 +73,7 @@ class AsyncSpec extends FreeSpec with Matchers with ScalaFutures with MockitoSug
       mockedCheck.thenReturn(Option(value))
 
       assertThrows[RuntimeException] {
-        checkAtIntervalUntilReady[String](waitingIntervalMs, timeoutMs)(checkable.check _).futureValue
+        checkAtIntervalUntilReady[String](checkable.check _)(waitingIntervalMs, timeoutMs).futureValue
       }
       verify(checkable, times(checkNumberBeforeTimeout)).check
     }
@@ -83,7 +83,7 @@ class AsyncSpec extends FreeSpec with Matchers with ScalaFutures with MockitoSug
       when(checkable.check()).thenReturn(None)
 
       assertThrows[RuntimeException] {
-        checkAtIntervalUntilReady[String](waitingIntervalMs, timeoutMs)(checkable.check _).futureValue
+        checkAtIntervalUntilReady[String](checkable.check _)(waitingIntervalMs, timeoutMs).futureValue
       }
       verify(checkable, times(checkNumberBeforeTimeout)).check
     }

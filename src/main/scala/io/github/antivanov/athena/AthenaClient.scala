@@ -43,10 +43,11 @@ class AthenaClient(configuration: AthenaConfiguration)(implicit context: Executi
   }
 
   private def getQueryResults[T: RowReader](queryExecution: QueryExecution): Future[Either[Throwable, QueryResults[T]]] = {
-    checkAtIntervalUntilReady(configuration.queryExecutionCheckIntervalMs, configuration.queryTimeoutMs) { () =>
+    checkAtIntervalUntilReady { () =>
       checkQueryExecutionResults(queryExecution)
-    }.map(Right(_)) recover {
-      case NonFatal(error) => Left(error)
+    } (configuration.queryExecutionCheckIntervalMs, configuration.queryTimeoutMs)
+      .map(Right(_)) recover {
+        case NonFatal(error) => Left(error)
     }
   }
 

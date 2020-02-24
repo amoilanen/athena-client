@@ -1,15 +1,14 @@
 package io.github.antivanov.athena.util
 
 import java.util.{Timer, TimerTask}
-import java.util.concurrent.{ScheduledExecutorService, ScheduledFuture, TimeUnit}
+import java.util.concurrent.{ScheduledExecutorService, TimeUnit}
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
-import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
 object Async {
 
-  def checkOnce[T](delayMs: Int = 0)(block: () => Future[T])(implicit ec: ExecutionContext, scheduler: ScheduledExecutorService): Future[T] = {
+  def checkOnce[T](block: () => Future[T], delayMs: Int = 0)(implicit ec: ExecutionContext, scheduler: ScheduledExecutorService): Future[T] = {
     val promise = Promise[T]
     scheduler.schedule(new Runnable {
       override def run(): Unit = {
@@ -24,7 +23,7 @@ object Async {
     promise.future
   }
 
-  def checkAtIntervalUntilReady[T](intervalMs: Int, timeoutMs: Int)(block: () => Option[T])(implicit ec: ExecutionContext): Future[T] = {
+  def checkAtIntervalUntilReady[T](block: () => Option[T])(intervalMs: Int, timeoutMs: Int)(implicit ec: ExecutionContext): Future[T] = {
     val promise = Promise[T]
     val timer = new Timer()
     var executionTimes = 0
