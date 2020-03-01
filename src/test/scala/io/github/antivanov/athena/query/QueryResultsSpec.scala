@@ -1,5 +1,6 @@
 package io.github.antivanov.athena.query
 
+import io.github.antivanov.athena.error.QueryResultsParsingError
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.{FreeSpec, Matchers}
 import software.amazon.awssdk.services.athena.model.{Datum, Row}
@@ -49,7 +50,7 @@ class QueryResultsSpec extends FreeSpec with MockFactory with Matchers {
         val error = new RuntimeException("Could not parse the value")
         (reader.readRow _).when(*).throws(error)
 
-        QueryResults(rows).parse() shouldEqual Left(QueryResultsParsingError(error))
+        QueryResults(rows).parse() shouldEqual Left(QueryResultsParsingError(rows, error))
       }
     }
   }

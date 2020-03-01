@@ -6,8 +6,9 @@ class QueryExecutionSpec extends FreeSpec with Matchers {
 
   "QueryExecution" - {
 
+    val query = "query"
     val executionId = "executionId"
-    val execution = QueryExecution(executionId)
+    val execution = QueryExecution(query, executionId)
 
     "constructGetQueryExecutionRequest" in {
       execution.constructGetQueryExecutionRequest().queryExecutionId() shouldEqual executionId

@@ -1,10 +1,11 @@
 package io.github.antivanov.athena
 
+import io.github.antivanov.athena.error.{AthenaClientError, QueryCancelledError, QueryFailedError, QueryResultsRetrievalError}
 import io.github.antivanov.athena.query.{Query, QueryExecution, QueryResults, RowReader}
 import software.amazon.awssdk.services.athena.model.QueryExecutionState.{CANCELLED, FAILED, QUEUED, RUNNING}
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
 import software.amazon.awssdk.services.athena
-import software.amazon.awssdk.services.athena.{ AthenaClient => JavaAthenaClient }
+import software.amazon.awssdk.services.athena.{AthenaClient => JavaAthenaClient}
 import software.amazon.awssdk.services.athena.model.Row
 import util.Async.checkAtIntervalUntilReady
 
@@ -30,7 +31,7 @@ class AthenaClient(configuration: AthenaConfiguration)(implicit context: Executi
     executeQuery(statement).map(_.map(_ => ()))
   }
 
-  def executeQuery[T: RowReader](query: String): Future[Either[Throwable, Seq[T]]] = {
+  def executeQuery[T: RowReader](query: String): Future[Either[AthenaClientError, Seq[T]]] = {
     val queryExecution = submitQuery(query)
     getQueryResults[T](queryExecution).map(_.flatMap(_.parse))
   }
@@ -39,15 +40,18 @@ class AthenaClient(configuration: AthenaConfiguration)(implicit context: Executi
     val queryExecutionRequest = Query(query).constructStartQueryExecutionRequest(configuration)
     val queryExecutionId = client.startQueryExecution(queryExecutionRequest).queryExecutionId
 
-    QueryExecution(queryExecutionId)
+    QueryExecution(query, queryExecutionId)
   }
 
-  private def getQueryResults[T: RowReader](queryExecution: QueryExecution): Future[Either[Throwable, QueryResults[T]]] = {
+  private def getQueryResults[T: RowReader](queryExecution: QueryExecution): Future[Either[AthenaClientError, QueryResults[T]]] = {
     checkAtIntervalUntilReady { () =>
       checkQueryExecutionResults(queryExecution)
     } (configuration.queryExecutionCheckIntervalMs, configuration.queryTimeoutMs)
       .map(Right(_)) recover {
-        case NonFatal(error) => Left(error)
+        case error: AthenaClientError =>
+          Left(error)
+        case NonFatal(error) =>
+          Left(QueryResultsRetrievalError(queryExecution, error))
     }
   }
 
@@ -56,10 +60,9 @@ class AthenaClient(configuration: AthenaConfiguration)(implicit context: Executi
     val queryState = queryExecutionResponse.queryExecution.status.state
 
     if (queryState == FAILED) {
-      //TODO: Define custom errors for AthenaClient?
-      throw new RuntimeException("Query failed")
+      throw QueryFailedError(queryExecution)
     } else if (queryState == CANCELLED) {
-      throw new RuntimeException("Query was cancelled")
+      throw QueryCancelledError(queryExecution)
     } else if (queryState == RUNNING || queryState == QUEUED) {
       None
     } else {

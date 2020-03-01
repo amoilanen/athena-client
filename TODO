@@ -7,8 +7,9 @@
   - Integration tests with a real database - OK
   - Unit tests & refactoring
     - Use ScalaMock library instead of Java Mockito - OK
+    - Create shared error hierarchy - OK
     - Move more code to the classes of the query package
-    - Create shared error hierarchy
+    - Add better logging: debug, info, warn, error
     - Define a RowReader for Instant?
     - Instead of QuerySlownessTolerance use PatienceConfig?
     - Add unit tests for all the classes
